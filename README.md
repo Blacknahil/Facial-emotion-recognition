@@ -60,4 +60,4 @@ You can frame the write-up around **categorization** of affect from faces, **rec
 
 ## License
 
-Use as needed for your course submission; cite DeepFace and datasets if your instructor requires references.
+
