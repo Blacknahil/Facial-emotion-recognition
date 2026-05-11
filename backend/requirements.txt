@@ -1,0 +1,8 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.12
+opencv-python-headless>=4.10.0
+numpy>=1.26.0
+# TensorFlow 2.16+ / Keras 3: RetinaFace (via DeepFace) expects tf_keras
+tf-keras>=2.21.0
+deepface>=0.0.93
