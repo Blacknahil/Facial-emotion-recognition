@@ -6,13 +6,21 @@ type PredictResponse = {
   scores: Record<string, number>;
 };
 
+type ModelOption = "deepface" | "hsemotion" | "finetuned";
+
+const MODEL_OPTIONS: { value: ModelOption; label: string }[] = [
+  { value: "deepface", label: "DeepFace (baseline)" },
+  { value: "hsemotion", label: "HSEmotion (AffectNet)" },
+  { value: "finetuned", label: "Fine-tuned (FER+)" },
+];
+
 const API_BASE = "/api";
 
-async function postFrame(blob: Blob): Promise<PredictResponse> {
+async function postFrame(blob: Blob, model: ModelOption): Promise<PredictResponse> {
   const form = new FormData();
   form.append("file", blob, "frame.jpg");
 
-  const res = await fetch(`${API_BASE}/predict`, {
+  const res = await fetch(`${API_BASE}/predict?model=${model}`, {
     method: "POST",
     body: form,
   });
@@ -43,6 +51,7 @@ export default function App() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictResponse | null>(null);
+  const [model, setModel] = useState<ModelOption>("deepface");
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -110,7 +119,7 @@ export default function App() {
             return;
           }
           try {
-            const data = await postFrame(blob);
+            const data = await postFrame(blob, model);
             setResult(data);
             setStatus("Done.");
           } catch (e) {
@@ -126,28 +135,31 @@ export default function App() {
         0.92,
       ),
     );
-  }, [cameraOn]);
+  }, [cameraOn, model]);
 
-  const onFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !file.type.startsWith("image/")) return;
+  const onFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || !file.type.startsWith("image/")) return;
 
-    setLoading(true);
-    setError(null);
-    setStatus("Analyzing upload…");
-    try {
-      const data = await postFrame(file);
-      setResult(data);
-      setStatus("Done.");
-    } catch (err) {
-      setResult(null);
-      setError(err instanceof Error ? err.message : "Request failed.");
-      setStatus("");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setLoading(true);
+      setError(null);
+      setStatus("Analyzing upload…");
+      try {
+        const data = await postFrame(file, model);
+        setResult(data);
+        setStatus("Done.");
+      } catch (err) {
+        setResult(null);
+        setError(err instanceof Error ? err.message : "Request failed.");
+        setStatus("");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [model],
+  );
 
   const sortedScores = result
     ? Object.entries(result.scores).sort((a, b) => b[1] - a[1])
@@ -157,10 +169,26 @@ export default function App() {
     <div className="page">
       <h1>Facial emotion recognition</h1>
       <p className="subtitle">
-        Webcam or image upload — predictions run on the FastAPI backend (DeepFace).
+        Webcam or image upload — choose a model below, then analyze.
       </p>
 
       <div className="panel">
+        <div className="model-selector">
+          <label htmlFor="model-select">Model:</label>
+          <select
+            id="model-select"
+            value={model}
+            onChange={(e) => setModel(e.target.value as ModelOption)}
+            disabled={loading}
+          >
+            {MODEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="video-wrap">
           <video ref={videoRef} playsInline muted />
         </div>
